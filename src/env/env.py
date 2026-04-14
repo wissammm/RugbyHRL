@@ -213,6 +213,6 @@ class Game1Env(gym.Env):
             4: (1.0,  0.0),   # right
             5: (0.0,  0.0),   # push (no movement)
         }
-        dx, dy   = _MOVES.get(action, (0.0, 0.0))
-        do_push  = (action == 5)
+        dx, dy   = _MOVES.get(int(action), (0.0, 0.0))
+        do_push  = (int(action) == 5)
         return obj.Vec2(dx, dy), do_push

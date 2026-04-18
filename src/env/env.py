@@ -55,6 +55,10 @@ class Game1Env(gym.Env):
         self._game_map: "map_module.Map | None" = None
         self._renderer = None
 
+        # tracked across steps for delta-based progress rewards
+        self._prev_dist_to_ball : float | None = None
+        self._prev_dist_to_goal : float | None = None
+
     # ------------------------------------------------------------------
     # Core API
     # ------------------------------------------------------------------
@@ -65,6 +69,9 @@ class Game1Env(gym.Env):
         self._game_map = map_module.Map.from_config(self.cfg, self.ground_tiles)
         self._engine   = Game1Engine(self._game_map, self.cfg)
         self._engine.save_initial_state()
+
+        self._prev_dist_to_ball = None
+        self._prev_dist_to_goal = None
 
         obs  = self._get_obs()
         info = {}
@@ -163,10 +170,14 @@ class Game1Env(gym.Env):
         Reward function for Game 1.
         """
         if result.get("won"):
-            return +10.0 
+            self._prev_dist_to_ball = None
+            self._prev_dist_to_goal = None
+            return +10.0
 
         if result.get("lost"):
-            return -10.0  
+            self._prev_dist_to_ball = None
+            self._prev_dist_to_goal = None
+            return -10.0
 
         assert self._game_map is not None
         p = self._game_map.player
@@ -185,9 +196,17 @@ class Game1Env(gym.Env):
             dist_to_ball = math.sqrt(
                 (p.pos.x - b.pos.x)**2 + (p.pos.y - b.pos.y)**2
             )
-            # Small positive reward for being close to the ball.
-            # +0.1 when touching, 0 at the far corner.
-            reward += 0.1 * (1.0 - dist_to_ball / max_dist)
+            # Penalise distance to ball: 0 when touching, -0.1 at the far corner.
+            reward += 0.1 * (dist_to_ball / max_dist - 1.0)
+
+            # Small bonus for getting closer to the ball than the previous step
+            if self._prev_dist_to_ball is not None:
+                delta = self._prev_dist_to_ball - dist_to_ball
+                if delta > 0:
+                    reward += 0.002 * delta / max_dist
+
+            self._prev_dist_to_ball = dist_to_ball
+            self._prev_dist_to_goal = None   # reset goal tracker while not holding ball
 
         else:
             goal_cx = g.pos.x + g.width  / 2
@@ -195,10 +214,19 @@ class Game1Env(gym.Env):
             dist_to_goal = math.sqrt(
                 (p.pos.x - goal_cx)**2 + (p.pos.y - goal_cy)**2
             )
-            # Small positive reward for being close to the goal with the ball.
-            reward += 0.2 * (1.0 - dist_to_goal / max_dist)
+            # Penalise distance to goal with ball: 0 when at goal, -0.2 at the far corner.
+            reward += 0.2 * (dist_to_goal / max_dist - 1.0)
 
-        # reward decrease as the time pass to have an speeder ai
+            # Small bonus for getting closer to the goal than the previous step
+            if self._prev_dist_to_goal is not None:
+                delta = self._prev_dist_to_goal - dist_to_goal
+                if delta > 0:
+                    reward += 0.005 * delta / max_dist
+
+            self._prev_dist_to_goal = dist_to_goal
+            self._prev_dist_to_ball = None   # reset ball tracker while holding ball
+
+        # small per-step time penalty to encourage speed
         reward -= 0.001
 
         return reward

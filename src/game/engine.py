@@ -140,10 +140,9 @@ class Engine:
         self._update_enemies()
         self._update_ball()
         self._handle_ball_pickup()
+        result = self._evaluate_rules()   # check before separating circles
         self._resolve_all_collisions()
         self._clamp_all_to_field()
-
-        result = self._evaluate_rules()
         result["player_pos"] = self.map.player.pos.copy() if self.map.player else None
         result["step"]       = self.step_count
         return result

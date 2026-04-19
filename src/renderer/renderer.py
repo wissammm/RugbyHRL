@@ -160,7 +160,9 @@ class Renderer:
     def _draw_hud(self, info: dict | None) -> None:
         lines = []
         if info:
-            lines.append(f"Step : {info.get('step', 0)}")
+            lines.append(f"Step   : {info.get('step', 0)}")
+            if "reward" in info:
+                lines.append(f"Reward : {info['reward']:+.4f}")
         player = self.map.player
         if player:
             if player.has_ball:

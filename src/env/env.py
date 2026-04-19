@@ -28,7 +28,7 @@ class Game1Env(gym.Env):
     def __init__(
         self,
         cfg          : GameConfig | None         = None,
-        max_steps    : int                       = 1_000,
+        max_steps    : int                       = 300,
         ground_tiles : list | None               = None,
         render_mode  : str | None                = None,
     ):
@@ -72,6 +72,8 @@ class Game1Env(gym.Env):
 
         self._prev_dist_to_ball = None
         self._prev_dist_to_goal = None
+        self._has_picked_up_ball = False  # tracks if the one-time pickup bonus was given
+        self._last_render_info  = {}
 
         obs  = self._get_obs()
         info = {}
@@ -94,6 +96,9 @@ class Game1Env(gym.Env):
             "step"    : result["step"],
         }
 
+        # keep a copy so render() can display it in the HUD
+        self._last_render_info = {**info, "reward": reward}
+
         return obs, reward, terminated, truncated, info
 
     def render(self):
@@ -108,7 +113,7 @@ class Game1Env(gym.Env):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.close()
-        self._renderer.render()
+        self._renderer.render(self._last_render_info)
 
     def close(self):
         if self._renderer is not None:
@@ -172,12 +177,12 @@ class Game1Env(gym.Env):
         if result.get("won"):
             self._prev_dist_to_ball = None
             self._prev_dist_to_goal = None
-            return +10.0
+            return +100.0
 
         if result.get("lost"):
             self._prev_dist_to_ball = None
             self._prev_dist_to_goal = None
-            return -10.0
+            return -100.0
 
         assert self._game_map is not None
         p = self._game_map.player
@@ -196,38 +201,37 @@ class Game1Env(gym.Env):
             dist_to_ball = math.sqrt(
                 (p.pos.x - b.pos.x)**2 + (p.pos.y - b.pos.y)**2
             )
-            # Penalise distance to ball: 0 when touching, -0.1 at the far corner.
-            reward += 0.1 * (dist_to_ball / max_dist - 1.0)
 
-            # Small bonus for getting closer to the ball than the previous step
+            # Only delta: bonus for closing in, penalty for moving away (no absolute term)
             if self._prev_dist_to_ball is not None:
-                delta = self._prev_dist_to_ball - dist_to_ball
-                if delta > 0:
-                    reward += 0.002 * delta / max_dist
+                delta = self._prev_dist_to_ball - dist_to_ball   # >0 if closing in
+                reward += 0.5 * delta / max_dist                 # symmetric reward/penalty
 
             self._prev_dist_to_ball = dist_to_ball
             self._prev_dist_to_goal = None   # reset goal tracker while not holding ball
 
         else:
+            # One-time bonus the first time the player picks up the ball this episode
+            if not self._has_picked_up_ball:
+                reward += 5.0
+                self._has_picked_up_ball = True
+
             goal_cx = g.pos.x + g.width  / 2
             goal_cy = g.pos.y + g.height / 2
             dist_to_goal = math.sqrt(
                 (p.pos.x - goal_cx)**2 + (p.pos.y - goal_cy)**2
             )
-            # Penalise distance to goal with ball: 0 when at goal, -0.2 at the far corner.
-            reward += 0.2 * (dist_to_goal / max_dist - 1.0)
 
-            # Small bonus for getting closer to the goal than the previous step
+            # Only delta: bonus for closing in, penalty for moving away (no absolute term)
             if self._prev_dist_to_goal is not None:
-                delta = self._prev_dist_to_goal - dist_to_goal
-                if delta > 0:
-                    reward += 0.005 * delta / max_dist
+                delta = self._prev_dist_to_goal - dist_to_goal   # >0 if closing in
+                reward += 0.5 * delta / max_dist                 # symmetric reward/penalty
 
             self._prev_dist_to_goal = dist_to_goal
             self._prev_dist_to_ball = None   # reset ball tracker while holding ball
 
-        # small per-step time penalty to encourage speed
-        reward -= 0.001
+        # small per-step survival bonus to incentivise staying alive
+        reward += 0.01
 
         return reward
 

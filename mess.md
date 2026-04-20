@@ -17,8 +17,8 @@ Bon du coup j'ai continuer d'entrainer en ppo avec du reward shapping, je pense 
 
 # todo : 
 ## Curriculum : 
-- [ ] faire en sorte d'avoir un reset plus configurable pour avoir du curriculum 
-- [ ] refaire un jupyter notebook 
+- [x] faire en sorte d'avoir un reset plus configurable pour avoir du curriculum 
+- [x] refaire un jupyter notebook 
 
 ## Essayer DIAYN 
 Je pense on peut essayer diayn on a que trois action ou deux á voir si ca donne de meilleurs resultats 

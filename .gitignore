@@ -1,4 +1,5 @@
 RugbyHRL/*
 examples/checkpoints/*
+examples/checkpoints_curriculum/*
 *.pyc
 *.egg-info

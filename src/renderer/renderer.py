@@ -163,6 +163,12 @@ class Renderer:
             lines.append(f"Step   : {info.get('step', 0)}")
             if "reward" in info:
                 lines.append(f"Reward : {info['reward']:+.4f}")
+            if "skill" in info:
+                z      = info["skill"]
+                n      = info.get("n_skills", "?")
+                lines.append(f"Skill  : {z} / {n - 1 if isinstance(n, int) else n}")
+            if "skill_remaining" in info:
+                lines.append(f"Time   : {info['skill_remaining']:.1f}s")
         player = self.map.player
         if player:
             if player.has_ball:

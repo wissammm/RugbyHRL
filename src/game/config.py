@@ -79,9 +79,9 @@ class GameConfig:
     enemies : list[EnemyConfig] = field(default_factory=lambda: [
         EnemyConfig(start_pos=Vec2(150, 120)),
         EnemyConfig(start_pos=Vec2(350, 100), max_speed=2.0),
-        # EnemyConfig(start_pos=Vec2(560, 140), max_speed=2.5),
-        # EnemyConfig(start_pos=Vec2(200, 260), max_speed=1.8),
-        # EnemyConfig(start_pos=Vec2(500, 240), max_speed=2.3),
+        EnemyConfig(start_pos=Vec2(560, 140), max_speed=2.5),
+        EnemyConfig(start_pos=Vec2(200, 260), max_speed=1.8),
+        EnemyConfig(start_pos=Vec2(500, 240), max_speed=2.3),
     ])
 
     default_enemy_friction : float = 0.82   # fallback when no tile and no per-enemy value
